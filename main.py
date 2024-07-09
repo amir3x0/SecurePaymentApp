@@ -1,8 +1,8 @@
 import sys
 from PyQt6.QtWidgets import QApplication, QWidget, QVBoxLayout, QLabel, QLineEdit, QPushButton
-from idea import idea_encrypt, idea_decrypt
-from ecdh import generate_ecdh_key_pair, compute_shared_secret
-from schnorr import generate_schnorr_signature, verify_schnorr_signature
+from IDEA_OFB_mode import idea_encrypt, idea_decrypt
+from EC_DH import generate_ecdh_key_pair, compute_shared_secret
+from Schnorr import generate_schnorr_signature, verify_schnorr_signature
 
 class SecurePaymentApp(QWidget):
     def __init__(self):

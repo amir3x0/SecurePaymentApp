@@ -1,5 +1,5 @@
 import sys
-from PyQt6.QtWidgets import QApplication, QWidget, QVBoxLayout, QLabel, QLineEdit, QPushButton, QComboBox, QFormLayout, QHBoxLayout
+from PyQt6.QtWidgets import QApplication, QWidget, QVBoxLayout, QLineEdit, QPushButton, QComboBox, QFormLayout, QHBoxLayout
 import IDEA_OFB_mode as IDEA
 from users import users, find_user_by_name_and_id
 
@@ -23,7 +23,7 @@ class SecurePaymentApp(QWidget):
         self.sender_expiry_month = QComboBox()
         self.sender_expiry_month.addItems([str(i).zfill(2) for i in range(1, 13)])
         self.sender_expiry_year = QComboBox()
-        self.sender_expiry_year.addItems([str(i) for i in range(2023, 2031)])
+        self.sender_expiry_year.addItems([str(i) for i in range(2024, 2035)])
         self.sender_ccv = QLineEdit()
         self.sender_ccv.setMaxLength(3)
         self.sender_amount = QLineEdit()
@@ -81,22 +81,31 @@ class SecurePaymentApp(QWidget):
         receiver_id = self.receiver_id.text()
 
         # Encrypt payment data
-        plaintext = f"{sender_name}|{sender_id}|{sender_card_number}|{sender_expiry_month}/{sender_expiry_year}|{sender_ccv}|{amount}"
-        key = 0x2BD6459F82C5B300952C49104881FF48  # Example 128-bit key
-        iv = b'\x00' * 8  # Example 64-bit IV
-        idea = IDEA.IDEA(key)
-        encrypted_data = IDEA.idea_ofb_mode(idea, iv, plaintext.encode(), mode='encrypt')
-        print(f'Encrypted Data: {encrypted_data.hex()}')
+        sender = find_user_by_name_and_id(sender_name, sender_id)
+        if sender:
+            plaintext = f"{sender_name}|{sender_id}|{sender_card_number}|{sender_expiry_month}/{sender_expiry_year}|{sender_ccv}|{amount}"
+            key = 0x2BD6459F82C5B300952C49104881FF48  # Example 128-bit key
+            iv = b'\x00' * 8  # Example 64-bit IV
+            idea = IDEA.IDEA(key)
+            encrypted_data = IDEA.idea_ofb_mode(idea, iv, plaintext.encode(), mode='encrypt')
+            print(f'Encrypted Data: {encrypted_data.hex()}')
 
-        # Check receiver
-        receiver = find_user_by_name_and_id(receiver_name, receiver_id)
-        if receiver:
-            decrypted_data = IDEA.idea_ofb_mode(idea, iv, encrypted_data, mode='decrypt')
-            decrypted_text = decrypted_data.decode().rstrip("\x00")
-            sender_name, sender_id, sender_card_number, sender_expiry_date, sender_ccv, amount = decrypted_text.split('|')
-            print(f'Receiver {receiver_name} (ID: {receiver_id}) received {amount} from {sender_name} (ID: {sender_id}).')
+            # Check receiver
+            receiver = find_user_by_name_and_id(receiver_name, receiver_id)
+            if receiver:
+                decrypted_data = IDEA.idea_ofb_mode(idea, iv, encrypted_data, mode='decrypt')
+                decrypted_text = decrypted_data.decode().rstrip("\x00")
+                sender_name, sender_id, sender_card_number, sender_expiry_date, sender_ccv, amount = decrypted_text.split(
+                    '|')
+                print(
+                    f'Receiver {receiver_name} (ID: {receiver_id}) received {amount} from {sender_name} (ID: {sender_id}).')
+            else:
+                print('Receiver not found. Payment not sent.')
+
         else:
-            print('Receiver not found. Payment not sent.')
+            print('Sender not found. Renter credentials.')
+
+
 
 def main():
     app = QApplication(sys.argv)

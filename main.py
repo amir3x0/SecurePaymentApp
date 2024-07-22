@@ -2,6 +2,7 @@ import sys
 from PyQt6.QtWidgets import QApplication, QWidget, QVBoxLayout, QLineEdit, QPushButton, QComboBox, QFormLayout, QHBoxLayout
 import IDEA_OFB_mode as IDEA
 from users import users, find_user_by_name_and_id
+from EC_DH import scalar_mult, Point, p
 
 class SecurePaymentApp(QWidget):
     def __init__(self):
@@ -80,32 +81,38 @@ class SecurePaymentApp(QWidget):
         receiver_name = self.receiver_name.text()
         receiver_id = self.receiver_id.text()
 
-        # Encrypt payment data
+        # Find sender and receiver
         sender = find_user_by_name_and_id(sender_name, sender_id)
-        if sender:
+        receiver = find_user_by_name_and_id(receiver_name, receiver_id)
+
+        if sender and receiver:
+            # Compute shared secret key using EC DH
+            sender_private_key = sender["private_key"]
+            receiver_public_key = receiver["public_key"]
+
+            shared_secret_point = scalar_mult(sender_private_key, receiver_public_key)
+            shared_secret_key = (shared_secret_point.x * shared_secret_point.y) % p
+
+            # Encrypt payment data
             plaintext = f"{sender_name}|{sender_id}|{sender_card_number}|{sender_expiry_month}/{sender_expiry_year}|{sender_ccv}|{amount}"
-            key = 0x2BD6459F82C5B300952C49104881FF48  # Example 128-bit key
+            key = shared_secret_key
             iv = b'\x00' * 8  # Example 64-bit IV
             idea = IDEA.IDEA(key)
             encrypted_data = IDEA.idea_ofb_mode(idea, iv, plaintext.encode(), mode='encrypt')
             print(f'Encrypted Data: {encrypted_data.hex()}')
 
-            # Check receiver
-            receiver = find_user_by_name_and_id(receiver_name, receiver_id)
-            if receiver:
-                decrypted_data = IDEA.idea_ofb_mode(idea, iv, encrypted_data, mode='decrypt')
-                decrypted_text = decrypted_data.decode().rstrip("\x00")
-                sender_name, sender_id, sender_card_number, sender_expiry_date, sender_ccv, amount = decrypted_text.split(
-                    '|')
-                print(
-                    f'Receiver {receiver_name} (ID: {receiver_id}) received {amount} from {sender_name} (ID: {sender_id}).')
-            else:
-                print('Receiver not found. Payment not sent.')
+            # Decrypt the data on the receiver side
+            receiver_private_key = receiver["private_key"]
+            sender_public_key = sender["public_key"]
+            shared_secret_point = scalar_mult(receiver_private_key, sender_public_key)
+            shared_secret_key = (shared_secret_point.x * shared_secret_point.y) % p
 
+            decrypted_data = IDEA.idea_ofb_mode(idea, iv, encrypted_data, mode='decrypt')
+            decrypted_text = decrypted_data.decode().rstrip("\x00")
+            sender_name, sender_id, sender_card_number, sender_expiry_date, sender_ccv, amount = decrypted_text.split('|')
+            print(f'Receiver {receiver_name} (ID: {receiver_id}) received {amount} from {sender_name} (ID: {sender_id}).')
         else:
-            print('Sender not found. Renter credentials.')
-
-
+            print('Sender or receiver not found. Payment not sent.')
 
 def main():
     app = QApplication(sys.argv)

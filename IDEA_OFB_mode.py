@@ -1,12 +1,3 @@
-def idea_encrypt(data, key):
-    # Implement IDEA encryption logic here
-    return data  # Placeholder
-
-def idea_decrypt(data, key):
-    # Implement IDEA decryption logic here
-    return data  # Placeholder
-
-
 class IDEA:
     def __init__(self, key):
         self.key = self.expand_key(key)

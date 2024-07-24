@@ -1,78 +1,81 @@
-class Point:
-    def __init__(self, x_init, y_init):
-        self.x = x_init
-        self.y = y_init
+import random
 
-    def __str__(self):
-        return f"({self.x}, {self.y})"
+class EllipticCurve:
+    def __init__(self, p, a, b):
+        self.p = p
+        self.a = a
+        self.b = b
 
-# EC parameters (updated values)
-a = 2
-b = 3
-p = 101  # A different small prime number for the field
+    def mod_inv(self, k, p):
+        """Modular inverse using Extended Euclidean Algorithm."""
+        if k == 0:
+            raise ZeroDivisionError("division by zero")
+        if k < 0:
+            return p - self.mod_inv(-k, p)
+        s, old_s = 0, 1
+        t, old_t = 1, 0
+        r, old_r = p, k
+        while r != 0:
+            quotient = old_r // r
+            old_r, r = r, old_r - quotient * r
+            old_s, s = s, old_s - quotient * s
+            old_t, t = t, old_t - quotient * t
+        gcd, x, y = old_r, old_s, old_t
+        return x % p
 
-# Generator point on the curve
-G = Point(3, 6)
+    def point_add(self, P, Q):
+        """Add two points P and Q on the elliptic curve."""
+        if P is None:
+            return Q
+        if Q is None:
+            return P
+        if P == Q:
+            return self.point_double(P)
+        if P[0] == Q[0] and P[1] != Q[1]:
+            return None
 
-def is_point_on_curve(point):
-    """Check if a point lies on the elliptic curve."""
-    return (point.y**2) % p == (point.x**3 + a * point.x + b) % p
+        # slope (lambda) = (y2 - y1) / (x2 - x1)
+        lam = ((Q[1] - P[1]) * self.mod_inv(Q[0] - P[0], self.p)) % self.p
+        x_r = (lam ** 2 - P[0] - Q[0]) % self.p
+        y_r = (lam * (P[0] - x_r) - P[1]) % self.p
+        return (x_r, y_r)
 
-def extended_gcd(a, b):
-    """Extended Euclidean Algorithm to find the GCD of a and b."""
-    if a == 0:
-        return b, 0, 1
-    gcd, x1, y1 = extended_gcd(b % a, a)
-    x = y1 - (b // a) * x1
-    y = x1
-    return gcd, x, y
+    def point_double(self, P):
+        """Double a point P on the elliptic curve."""
+        if P is None:
+            return None
 
-def inv_mod(a, p):
-    """Compute the modular inverse of a mod p using the Extended Euclidean Algorithm."""
-    lm, hm = 1, 0
-    low, high = a % p, p
-    while low > 1:
-        ratio = high // low
-        nm, new = hm - lm * ratio, high - low * ratio
-        lm, low, hm, high = nm, new, lm, low
-    return lm % p
+        # slope (lambda) = (3*x^2 + a) / (2*y)
+        lam = ((3 * P[0] ** 2 + self.a) * self.mod_inv(2 * P[1], self.p)) % self.p
+        x_r = (lam ** 2 - 2 * P[0]) % self.p
+        y_r = (lam * (P[0] - x_r) - P[1]) % self.p
+        return (x_r, y_r)
 
+    def scalar_mult(self, k, P):
+        """Multiply point P by scalar k using the double-and-add method."""
+        result = None
+        addend = P
 
-def add_points(P, Q):
-    """Add two points P and Q on the elliptic curve."""
-    if P.x == Q.x and P.y == -Q.y % p:
-        return Point(0, 0)  # Point at infinity
+        while k:
+            if k & 1:
+                result = self.point_add(result, addend)
+            addend = self.point_double(addend)
+            k >>= 1
 
-    if P.x == Q.x and P.y == Q.y:
-        # Point doubling
-        if P.y == 0:
-            return Point(0, 0)
-        s = (3 * P.x * P.x + a) * inv_mod(2 * P.y, p) % p
-    else:
-        if Q.x == P.x:
-            raise ValueError(f"Points {P} and {Q} have the same x-coordinate, causing a zero denominator.")
-        inv = inv_mod((Q.x - P.x) % p, p)
-        if inv is None:
-            raise ValueError(f"No modular inverse for {(Q.x - P.x) % p} mod {p}")
-        s = (Q.y - P.y) * inv % p
+        return result
 
-    x_r = (s * s - P.x - Q.x) % p
-    y_r = (s * (P.x - x_r) - P.y) % p
-    return Point(x_r, y_r)
+# SECP256k1 parameters
+p = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFC2F
+a = 0
+b = 7
+Gx = 0x79BE667EF9DCBBAC55A06295CE870B07029BFCDB2DCE28D959F2815B16F81798
+Gy = 0x483ADA7726A3C4655DA4FBFC0E1108A8FD17B448A68554199C47D08FFB10D4B8
+n = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141
 
-def scalar_mult(k, P):
-    """Multiply point P by scalar k on the elliptic curve."""
-    if k < 0:
-        return scalar_mult(-k, Point(P.x, -P.y % p))
-    
-    R = Point(0, 0)
-    Q = P
+curve = EllipticCurve(p, a, b)
+G = (Gx, Gy)
 
-    while k > 0:
-        if k % 2 == 1:
-            R = add_points(R, Q)
-        Q = add_points(Q, Q)
-        k //= 2
-
-    return R
+# Static private keys
+Ka = 1234567890
+Kb = 9876543210
 

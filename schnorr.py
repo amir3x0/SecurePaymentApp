@@ -1,34 +1,94 @@
-from EC_DH import Point, scalar_mult, add_points, p, G
 import hashlib
 import random
+from sympy import isprime, nextprime, mod_inverse
+import sympy 
 
-class Schnorr:
-    def __init__(self, private_key):
-        self.private_key = private_key
-        self.public_key = scalar_mult(private_key, G)
+class SchnorrSignature:
+    def __init__(self, p, q, g):
+        self.p = p
+        self.q = q
+        self.g = g
+        self.x = None  # Private key
+        self.y = None  # Public key
 
-    def sign(self, message):
-        # Generate a random nonce
-        k = random.SystemRandom().randint(1, p - 1)
-        R = scalar_mult(k, G)
-        r = R.x % p
+    def generate_keys(self):
+        """Generate private key x and public key y."""
+        self.x = random.randint(1, self.q - 1)  # Private key
+        self.y = pow(self.g, self.x)  # Public key
+        print(f"Generated keys - Private key (x): {self.x}, Public key (y): {self.y}")
 
-        # Hash the message and r
-        e = int.from_bytes(hashlib.sha256((str(r) + message).encode()).digest(), byteorder='big') % p
+    def hash_function(self, data):
+        """Hash function H"""
+        return int(hashlib.sha256(data.encode()).hexdigest(), 16)
+
+    def sign(self, M):
+        """Generate a Schnorr signature for the message M."""
+        if self.x is None:
+            raise ValueError("Private key x is not initialized. Generate keys first.")
+
+        # Choose a random integer k (nonce)
+        k = random.randint(1, self.q - 1)
+        print(f"Generated k: {k}")
+        
+        # Compute r
+        r = pow(self.g, k)
+        print(f"Computed r: {r}")
+
+        # Compute e
+        e = self.hash_function(str(r) + str(M))
+        print(f"Computed e: {e}")
 
         # Compute s
-        s = (k + e * self.private_key) % p
+        s = (k + self.x * e) 
+        print(f"Computed s: {s}")
+        
+        return r, s
+    
+    def verify(self, M, r, s, y):
+        """Verify a Schnorr signature."""
+        
+        # Compute e
+        e = self.hash_function(str(r) + str(M))
+        print(f"Computed e: {e}")
 
-        print(f"Signing Debug - k: {k}, R: ({R.x}, {R.y}), r: {r}, e: {e}, s: {s}")
-        return (r, s)
+        # Compute v1
+        v1 = pow(self.g, s, self.p)
+        print(f"Computed v1: {v1}")
 
-    def verify(self, message, signature):
-        r, s = signature
-        e = int.from_bytes(hashlib.sha256((str(r) + message).encode()).digest(), byteorder='big') % p
-        R1 = scalar_mult(s, G)
-        R2 = scalar_mult(-e, self.public_key)
-        R = add_points(R1, R2)
+        # Compute v2
+        v2 = (pow(y, e,self.p) * r) % self.p
+        print(f"Computed v2: {v2}")
 
-        print(f"Verification Debug - r: {r}, s: {s}, e: {e}, R1: ({R1.x}, {R1.y}), R2: ({R2.x}, {R2.y}), R: ({R.x}, {R.y}), R.x % p: {R.x % p}")
-        return R.x % p == r
+        return v1 == v2
 
+
+def generate_schnorr_parameters(bits):
+    """Generates Schnorr parameters p, q, and a."""
+
+    while True:
+        # Generate a random prime p of specified bit length
+        p = sympy.randprime(2**(bits-1), 2**bits)
+        
+        # Compute p-1
+        p_minus_one = p - 1
+
+        # Factorize p-1
+        factors = sympy.factorint(p_minus_one)
+
+        # Find a large prime divisor q
+        q_candidates = [factor for factor, exponent in factors.items() if sympy.isprime(factor)]
+        
+        if not q_candidates:
+            continue  # If no prime factors found, generate a new p
+
+        q = max(q_candidates)
+
+        # Ensure 1 < q < p-1
+        if 1 < q < p - 1:
+            break
+
+    # Choose a generator a
+    # a should be a primitive root mod p. Here, 2 is often used as a starting point.
+    a = 2
+
+    return p, q, a

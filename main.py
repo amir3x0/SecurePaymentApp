@@ -1,10 +1,11 @@
 import sys
-from PyQt6.QtWidgets import QApplication, QWidget, QVBoxLayout, QLineEdit, QPushButton, QComboBox, QFormLayout, QHBoxLayout
+from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QLineEdit, QPushButton, QComboBox, QFormLayout, QHBoxLayout
 import IDEA_OFB_mode as IDEA
 from users import users, find_user_by_name_and_id
 from EC_DH import scalar_mult, Point, p
-from Schnorr import Schnorr
+from schnorr import SchnorrSignature , generate_schnorr_parameters
 import hashlib
+import sympy
 
 class SecurePaymentApp(QWidget):
     def __init__(self):
@@ -86,17 +87,27 @@ class SecurePaymentApp(QWidget):
 
     def transfer_payment(self):
         # Sender data
-        sender_name = self.sender_card_holder_name.text()
-        sender_id = self.sender_card_holder_id.text()
-        sender_card_number = self.sender_card_number.text()
-        sender_expiry_month = self.sender_expiry_month.currentText()
-        sender_expiry_year = self.sender_expiry_year.currentText()
-        sender_ccv = self.sender_ccv.text()
-        amount = self.sender_amount.text()
+        # sender_name = self.sender_card_holder_name.text()
+        # sender_id = self.sender_card_holder_id.text()
+        # sender_card_number = self.sender_card_number.text()
+        # sender_expiry_month = self.sender_expiry_month.currentText()
+        # sender_expiry_year = self.sender_expiry_year.currentText()
+        # sender_ccv = self.sender_ccv.text()
+        # amount = self.sender_amount.text()
 
+        # # Receiver data
+        # receiver_name = self.receiver_name.text()
+        # receiver_id = self.receiver_id.text()
+        sender_name = "Amir Mishayev"
+        sender_id = "318212107"
+        sender_card_number = "4569871236547890"
+        sender_expiry_month = "12"
+        sender_expiry_year = "2024"
+        sender_ccv = "676"
+        amount = "1200"
         # Receiver data
-        receiver_name = self.receiver_name.text()
-        receiver_id = self.receiver_id.text()
+        receiver_name = "Shimron Ifrah"
+        receiver_id = "312423247"
 
         # Find sender and receiver
         sender = find_user_by_name_and_id(sender_name, sender_id)
@@ -121,9 +132,12 @@ class SecurePaymentApp(QWidget):
             print(f'Encrypted Data: {encrypted_data.hex()}')
 
             # Generate Schnorr signature
-            schnorr = Schnorr(sender_private_key)
-            signature = schnorr.sign(plaintext)
-            print(f"Signature: {signature}")
+            p_schnorr ,q_schnorr ,g_schnorr  = generate_schnorr_parameters(8)
+            sender_schnorr = SchnorrSignature(p_schnorr,q_schnorr,g_schnorr)
+            sender_schnorr.generate_keys()
+            
+            r,s = sender_schnorr.sign(plaintext.encode())
+            print(f"Signature: {r,s}")
 
             # Decrypt the data on the receiver side
             receiver_private_key = receiver["private_key"]
@@ -140,8 +154,8 @@ class SecurePaymentApp(QWidget):
             print(f'Receiver {receiver_name} (ID: {receiver_id}) received {amount} from {sender_name} (ID: {sender_id}).')
 
             # Verify Schnorr signature
-            schnorr_receiver = Schnorr(receiver_private_key)
-            is_valid = schnorr_receiver.verify(plaintext, signature)
+            schnorr_receiver = SchnorrSignature(p_schnorr,q_schnorr,g_schnorr)
+            is_valid =schnorr_receiver.verify(plaintext.encode(),r,s,sender_schnorr.y)
             print(f"Signature valid: {is_valid}")
 
         else:

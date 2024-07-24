@@ -27,18 +27,22 @@ def extended_gcd(a, b):
     y = x1
     return gcd, x, y
 
-def inv_mod(k, p):
-    """Compute the modular inverse of k modulo p using the Extended Euclidean Algorithm."""
-    k = k % p
-    gcd, x, y = extended_gcd(k, p)
-    if gcd != 1:
-        raise ValueError(f"No modular inverse for {k} mod {p}")
-    return x % p
+def inv_mod(a, p):
+    """Compute the modular inverse of a mod p using the Extended Euclidean Algorithm."""
+    lm, hm = 1, 0
+    low, high = a % p, p
+    while low > 1:
+        ratio = high // low
+        nm, new = hm - lm * ratio, high - low * ratio
+        lm, low, hm, high = nm, new, lm, low
+    return lm % p
+
 
 def add_points(P, Q):
     """Add two points P and Q on the elliptic curve."""
     if P.x == Q.x and P.y == -Q.y % p:
-        return Point(0, 0)
+        return Point(0, 0)  # Point at infinity
+
     if P.x == Q.x and P.y == Q.y:
         # Point doubling
         if P.y == 0:
@@ -51,6 +55,7 @@ def add_points(P, Q):
         if inv is None:
             raise ValueError(f"No modular inverse for {(Q.x - P.x) % p} mod {p}")
         s = (Q.y - P.y) * inv % p
+
     x_r = (s * s - P.x - Q.x) % p
     y_r = (s * (P.x - x_r) - P.y) % p
     return Point(x_r, y_r)
@@ -59,11 +64,15 @@ def scalar_mult(k, P):
     """Multiply point P by scalar k on the elliptic curve."""
     if k < 0:
         return scalar_mult(-k, Point(P.x, -P.y % p))
+    
     R = Point(0, 0)
     Q = P
+
     while k > 0:
         if k % 2 == 1:
             R = add_points(R, Q)
         Q = add_points(Q, Q)
-        k = k // 2
+        k //= 2
+
     return R
+

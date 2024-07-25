@@ -6,6 +6,7 @@ from EC_DH import curve  , G
 from schnorr import SchnorrSignature , generate_schnorr_parameters
 import hashlib
 import sympy
+import random
 
 class SecurePaymentApp(QWidget):
     def __init__(self):
@@ -70,22 +71,6 @@ class SecurePaymentApp(QWidget):
 
         self.setLayout(layout)
         
-        """
-            def derive_key(self, shared_secret, key_size=128):
-                # Convert the shared secret to bytes
-                shared_secret_bytes = shared_secret.to_bytes((shared_secret.bit_length() + 7) // 8, byteorder='big')
-                
-                # Hash the shared secret using SHA-256
-                hashed_secret = hashlib.sha256(shared_secret_bytes).digest()
-                
-                # Truncate or expand the hashed secret to the desired key size (128 bits)
-                key = hashed_secret[:key_size // 8]  # 128 bits / 8 = 16 bytes
-                
-                # Ensure the key is 128 bits by padding with zeros if necessary
-                key = key.ljust(key_size // 8, b'\x00')
-                
-                return int.from_bytes(key, byteorder='big')
-        """
 
     def transfer_payment(self):
        # Sender data
@@ -120,51 +105,73 @@ class SecurePaymentApp(QWidget):
            
            # ----------------------------- sender side --------------------------------------- #
            # Compute shared secret key using EC DH
-           sender_private_key = sender["private_key"]
-           receiver_public_key = receiver["public_key"]
+           
+           # randomize public key for the schnorr signature
+           schnorr_index = random.randint(0, len(sender["schnor_public_key"]) - 1)
+           
+           # random two index of the priavte key and the corisponding public key of sender and reciver
+           index_sender, index_receiver = random.sample(range(len(sender["private_key"])), 2) 
+           print(f"--------transfer Payment  action-------\n")
+           #get private key of sender and public key of reciver
+           sender_private_key = sender["private_key"][index_sender]
+           receiver_public_key = receiver["public_key"][index_receiver]
+           print(f"sender private key: {sender_private_key}\n ")
+           print(f"reciver public key: {receiver_public_key}\n")
     
            # shared secret key
            shared_secret_sender_side = curve.scalar_mult(sender_private_key,receiver_public_key)
-           print(f"sender shared key: {shared_secret_sender_side}")
+           print(f"sender calculated shared key: {shared_secret_sender_side}\n")
     
            # Encrypt payment data
-           plaintext = f"{sender_name}|{sender_id}|{sender_card_number}|{sender_expiry_month}/{sender_expiry_year}|{sender_ccv}|{amount}"
+           plaintext = f"data: {sender_name}|{sender_id}|{sender_card_number}|{sender_expiry_month}/{sender_expiry_year}|{sender_ccv}|{amount}"
            iv = b'\x00' * 8  # Example 64-bit IV
            idea = IDEA.IDEA(shared_secret_sender_side[0])
+           print("----Encrypt data----\n")
            encrypted_data = IDEA.idea_ofb_mode(idea, iv, plaintext.encode(), mode='encrypt')
-           print(f'Encrypted Data: {encrypted_data.hex()}')
+           print(f'Encrypted Data: {encrypted_data.hex()}\n\n')
     
            # Generate Schnorr signature
-           p_schnorr ,q_schnorr ,g_schnorr  = generate_schnorr_parameters(8)
+           print("----create signature using schnorr----\n")
+           sender_shcnorr_public_keys = sender["schnor_public_key"]
+           p_schnorr, q_schnorr, g_schnorr = sender_shcnorr_public_keys[schnorr_index]
+           print(f"public key p = {p_schnorr} q = {q_schnorr} g= {g_schnorr}\n" )
            sender_schnorr = SchnorrSignature(p_schnorr,q_schnorr,g_schnorr)
            sender_schnorr.generate_keys()
-           
            r,s = sender_schnorr.sign(plaintext.encode())
-           print(f"Signature: {r,s}")
+           print(f"Signature: r= {r} s = {s} y ={sender_schnorr.y}\n\n")
            
            
            
            # ----------------------------- reciver side --------------------------------------- #
            
            # Compute shared secret key using EC DH
-           receiver_private_key = receiver["private_key"]
-           sender_public_key = sender["public_key"]
+           print("---------------reciver side----------\n\n")
+           print("receiver side received message\n")
+           
+           #get private key of reciver and public key of sender
+           receiver_private_key = receiver["private_key"][index_receiver]
+           sender_public_key = sender["public_key"][index_sender]
+           print(f"receiver private key: {receiver_private_key}\n")
+           print(f"sender public key: {sender_public_key}\n")
            
            shared_secret_reciver_side =  curve.scalar_mult(receiver_private_key,sender_public_key)
-           print(f"reciever shared key side: {shared_secret_reciver_side}")
+           print(f"reciever calculated shared key side: {shared_secret_reciver_side}\n")
     
            idea_reciver = IDEA.IDEA(shared_secret_reciver_side[0])
-           
+           print("----decyper message----\n")
            # decyper the data using idea
            decrypted_data = IDEA.idea_ofb_mode(idea_reciver, iv, encrypted_data, mode='decrypt')
            decrypted_text = decrypted_data.decode().rstrip("\x00")
            sender_name, sender_id, sender_card_number, sender_expiry_date, sender_ccv, amount = decrypted_text.split('|')
-           print(f'Receiver {receiver_name} (ID: {receiver_id}) received {amount} from {sender_name} (ID: {sender_id}).')
-    
+           print(f'decypered message:  {decrypted_text}')    
            # Verify Schnorr signature
+           print("\n\n----verifing signature----\n")
            schnorr_receiver = SchnorrSignature(p_schnorr,q_schnorr,g_schnorr)
            is_valid =schnorr_receiver.verify(plaintext.encode(),r,s,sender_schnorr.y)
-           print(f"Signature valid: {is_valid}")
+           print(f"\nSignature valid: {is_valid}\n")
+           
+           print(f'application message: Receiver {receiver_name} (ID: {receiver_id}) received {amount} from {sender_name} (ID: {sender_id}).\n\n')
+
     
        else:
            print('Sender or receiver not found. Payment not sent.')

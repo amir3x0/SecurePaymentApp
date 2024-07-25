@@ -76,6 +76,18 @@ curve = EllipticCurve(p, a, b)
 G = (Gx, Gy)
 
 # Static private keys
-Ka = 1234567890
-Kb = 9876543210
+private_keys = [
+    1357924680,
+    2468135790,
+    1122334455,
+    9988776655,
+    1231231231,
+    9879879879,
+    1111222233,
+    4444555566,
+    7777888899,
+    5555666677
+]
+
+public_keys = [curve.scalar_mult(k, G) for k in private_keys]
 

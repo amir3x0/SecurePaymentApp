@@ -14,7 +14,7 @@ class SchnorrSignature:
     def generate_keys(self):
         """Generate private key x and public key y."""
         self.x = random.randint(1, self.q - 1)  # Private key
-        self.y = pow(self.g, self.x)  # Public key
+        self.y = pow(self.g, self.x)%self.p  # Public key
         print(f"Generated keys - Private key (x): {self.x}, Public key (y): {self.y}")
 
     def hash_function(self, data):
@@ -39,7 +39,7 @@ class SchnorrSignature:
         print(f"Computed e: {e}")
 
         # Compute s
-        s = (k + self.x * e) 
+        s = (k + self.x * e)
         print(f"Computed s: {s}")
         
         return r, s
@@ -92,3 +92,31 @@ def generate_schnorr_parameters(bits):
     a = 2
 
     return p, q, a
+
+
+#used generate_schnorr_parameters(8) to create difrrent public keys and stored them in 2d array
+import numpy as np
+# p , q , g=2
+# Define the 2D array with the provided values
+schnorr_public_keys = [
+    [211, 7, 2],
+    [163, 3, 2],
+    [181, 5, 2],
+    [223, 37, 2],
+    [157, 13, 2],
+    [173, 43, 2],
+    [137, 17, 2],
+    [251, 5, 2],
+    [211, 7, 2],
+    [251, 5, 2],
+    [223, 37, 2],
+    [173, 43, 2],
+    [137, 17, 2],
+    [251, 5, 2],
+    [223, 37, 2],
+    [163, 3, 2],
+    [139, 23, 2],
+    [251, 5, 2],
+    [137, 17, 2],
+    [227, 113, 2]
+]

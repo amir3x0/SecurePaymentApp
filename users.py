@@ -10,6 +10,16 @@ users = [
 ]
 
 def find_user_by_name_and_id(name, user_id):
+    """
+    Find a user by their name and ID.
+
+    Args:
+        name (str): The name of the user to search for.
+        user_id (int): The ID of the user to search for.
+
+    Returns:
+        dict or None: The user dictionary if found, None otherwise.
+    """
     for user in users:
         if user["name"] == name and user["id"] == user_id:
             return user

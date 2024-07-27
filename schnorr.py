@@ -4,6 +4,17 @@ from sympy import isprime, nextprime, mod_inverse
 import sympy 
 
 class SchnorrSignature:
+    """
+    A class representing the Schnorr Signature scheme.
+
+    Attributes:
+        p (int): The prime modulus.
+        q (int): The prime order of the subgroup.
+        g (int): The generator of the subgroup.
+        x (int): The private key.
+        y (int): The public key.
+    """
+
     def __init__(self, p, q, g):
         self.p = p
         self.q = q
@@ -18,11 +29,25 @@ class SchnorrSignature:
         print(f"Generated keys - Private key (x): {self.x}, Public key (y): {self.y}")
 
     def hash_function(self, data):
-        """Hash function H"""
+        """Hash function H.
+
+        Args:
+            data (str): The input data to be hashed.
+
+        Returns:
+            int: The hashed value.
+        """
         return int(hashlib.sha256(data.encode()).hexdigest(), 16)
 
     def sign(self, M):
-        """Generate a Schnorr signature for the message M."""
+        """Generate a Schnorr signature for the message M.
+
+        Args:
+            M (str): The message to be signed.
+
+        Returns:
+            tuple: The signature (r, s).
+        """
         if self.x is None:
             raise ValueError("Private key x is not initialized. Generate keys first.")
 
@@ -45,7 +70,17 @@ class SchnorrSignature:
         return r, s
     
     def verify(self, M, r, s, y):
-        """Verify a Schnorr signature."""
+        """Verify a Schnorr signature.
+
+        Args:
+            M (str): The message that was signed.
+            r (int): The first part of the signature.
+            s (int): The second part of the signature.
+            y (int): The public key.
+
+        Returns:
+            bool: True if the signature is valid, False otherwise.
+        """
         
         # Compute e
         e = self.hash_function(str(r) + str(M))

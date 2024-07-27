@@ -1,13 +1,40 @@
 import random
 
 class EllipticCurve:
+    """
+    Represents an elliptic curve defined over a finite field.
+
+    Attributes:
+    p (int): The prime modulus of the finite field.
+    a (int): The coefficient a of the elliptic curve equation.
+    b (int): The coefficient b of the elliptic curve equation.
+
+    Methods:
+    mod_inv(k, p): Calculates the modular inverse of a number using the Extended Euclidean Algorithm.
+    point_add(P, Q): Adds two points on the elliptic curve.
+    point_double(P): Doubles a point on the elliptic curve.
+    scalar_mult(k, P): Multiplies a point on the elliptic curve by a scalar using the double-and-add method.
+    """
+
     def __init__(self, p, a, b):
         self.p = p
         self.a = a
         self.b = b
 
     def mod_inv(self, k, p):
-        """Modular inverse using Extended Euclidean Algorithm."""
+        """
+        Modular inverse using Extended Euclidean Algorithm.
+
+        Parameters:
+        k (int): The number for which the modular inverse is to be calculated.
+        p (int): The modulus.
+
+        Returns:
+        int: The modular inverse of k modulo p.
+
+        Raises:
+        ZeroDivisionError: If k is equal to 0.
+        """
         if k == 0:
             raise ZeroDivisionError("division by zero")
         if k < 0:

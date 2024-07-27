@@ -1,9 +1,9 @@
 import sys
-from PyQt6.QtWidgets import QApplication, QWidget, QVBoxLayout, QLineEdit, QPushButton, QComboBox, QFormLayout, QHBoxLayout
+from PyQt6.QtWidgets import QApplication, QWidget, QVBoxLayout, QLineEdit, QPushButton, QComboBox, QFormLayout, QHBoxLayout, QLabel
 import IDEA_OFB_mode as IDEA
 from users import users, find_user_by_name_and_id
-from EC_DH import curve  , G
-from schnorr import SchnorrSignature , generate_schnorr_parameters
+from EC_DH import curve, G
+from schnorr import SchnorrSignature, generate_schnorr_parameters
 import hashlib
 import sympy
 import random
@@ -74,12 +74,14 @@ class SecurePaymentApp(QWidget):
         self.transfer_button = QPushButton('Transfer Payment')
         self.transfer_button.clicked.connect(self.transfer_payment)
 
+        self.result_label = QLabel('')  # Label to show the result of the payment
+
         layout = QVBoxLayout()
         layout.addLayout(main_layout)
         layout.addWidget(self.transfer_button)
+        layout.addWidget(self.result_label)
 
         self.setLayout(layout)
-        
 
     def transfer_payment(self):
         """
@@ -118,6 +120,8 @@ class SecurePaymentApp(QWidget):
         # # Receiver data
         # receiver_name = self.receiver_name.text()
         # receiver_id = self.receiver_id.text()
+
+        # For testing purposes, hard-coded values can be used as follows:
         sender_name = "Amir Mishayev"
         sender_id = "318212107"
         sender_card_number = "4569871236547890"
@@ -125,7 +129,6 @@ class SecurePaymentApp(QWidget):
         sender_expiry_year = "2024"
         sender_ccv = "676"
         amount = "1200"
-        # Receiver data
         receiver_name = "Shimron Ifrah"
         receiver_id = "312423247"
 
@@ -142,7 +145,7 @@ class SecurePaymentApp(QWidget):
 
             # random two index of the priavte key and the corisponding public key of sender and reciver
             index_sender, index_receiver = random.sample(range(len(sender["private_key"])), 2)
-            print(f"--------transfer Payment  action-------\n")
+            print(f"--------transfer Payment action-------\n")
             # get private key of sender and public key of reciver
             sender_private_key = sender["private_key"][index_sender]
             receiver_public_key = receiver["public_key"][index_receiver]
@@ -171,37 +174,46 @@ class SecurePaymentApp(QWidget):
             r, s = sender_schnorr.sign(plaintext.encode())
             print(f"Signature: r= {r} s = {s} y ={sender_schnorr.y}\n\n")
 
-            # ----------------------------- reciver side --------------------------------------- #
+            # ----------------------------- receiver side --------------------------------------- #
 
             # Compute shared secret key using EC DH
-            print("---------------reciver side----------\n\n")
+            print("---------------receiver side----------\n\n")
             print("receiver side received message\n")
 
-            # get private key of reciver and public key of sender
+            # get private key of receiver and public key of sender
             receiver_private_key = receiver["private_key"][index_receiver]
             sender_public_key = sender["public_key"][index_sender]
             print(f"receiver private key: {receiver_private_key}\n")
             print(f"sender public key: {sender_public_key}\n")
 
-            shared_secret_reciver_side = curve.scalar_mult(receiver_private_key, sender_public_key)
-            print(f"reciever calculated shared key side: {shared_secret_reciver_side}\n")
+            shared_secret_receiver_side = curve.scalar_mult(receiver_private_key, sender_public_key)
+            print(f"receiver calculated shared key side: {shared_secret_receiver_side}\n")
 
-            idea_reciver = IDEA.IDEA(shared_secret_reciver_side[0])
-            print("----decyper message----\n")
-            # decyper the data using idea
-            decrypted_data = IDEA.idea_ofb_mode(idea_reciver, iv, encrypted_data, mode='decrypt')
+            # Initialize IDEA for decryption
+            idea_receiver = IDEA.IDEA(shared_secret_receiver_side[0])
+            print("----decrypt message----\n")
+            # decrypt the data using idea
+            decrypted_data = IDEA.idea_ofb_mode(idea_receiver, iv, encrypted_data, mode='decrypt')
             decrypted_text = decrypted_data.decode().rstrip("\x00")
             sender_name, sender_id, sender_card_number, sender_expiry_date, sender_ccv, amount = decrypted_text.split('|')
-            print(f'decypered message:  {decrypted_text}')
+            print(f'decrypted message:  {decrypted_text}')
+            
             # Verify Schnorr signature
-            print("\n\n----verifing signature----\n")
+            print("\n\n----verifying signature----\n")
             schnorr_receiver = SchnorrSignature(p_schnorr, q_schnorr, g_schnorr)
             is_valid = schnorr_receiver.verify(plaintext.encode(), r, s, sender_schnorr.y)
             print(f"\nSignature valid: {is_valid}\n")
 
-            print(f'application message: Receiver {receiver_name} (ID: {receiver_id}) received {amount} from {sender_name} (ID: {sender_id}).\n\n')
+            if is_valid:
+                message = f"Receiver {receiver_name} (ID: {receiver_id}) received {amount} from data: {sender_name} (ID: {sender_id})."
+                self.result_label.setText(message)
+                print(f'application message: {message}\n\n')
+            else:
+                self.result_label.setText('Signature verification failed. Payment not sent.')
+                print('Signature verification failed. Payment not sent.')
 
         else:
+            self.result_label.setText('Sender or receiver not found. Payment not sent.')
             print('Sender or receiver not found. Payment not sent.')
 
 def main():

@@ -1,40 +1,13 @@
 import random
 
 class EllipticCurve:
-    """
-    Represents an elliptic curve defined over a finite field.
-
-    Attributes:
-    p (int): The prime modulus of the finite field.
-    a (int): The coefficient a of the elliptic curve equation.
-    b (int): The coefficient b of the elliptic curve equation.
-
-    Methods:
-    mod_inv(k, p): Calculates the modular inverse of a number using the Extended Euclidean Algorithm.
-    point_add(P, Q): Adds two points on the elliptic curve.
-    point_double(P): Doubles a point on the elliptic curve.
-    scalar_mult(k, P): Multiplies a point on the elliptic curve by a scalar using the double-and-add method.
-    """
-
     def __init__(self, p, a, b):
         self.p = p
         self.a = a
         self.b = b
 
     def mod_inv(self, k, p):
-        """
-        Modular inverse using Extended Euclidean Algorithm.
-
-        Parameters:
-        k (int): The number for which the modular inverse is to be calculated.
-        p (int): The modulus.
-
-        Returns:
-        int: The modular inverse of k modulo p.
-
-        Raises:
-        ZeroDivisionError: If k is equal to 0.
-        """
+        """Modular inverse using Extended Euclidean Algorithm."""
         if k == 0:
             raise ZeroDivisionError("division by zero")
         if k < 0:
@@ -103,18 +76,32 @@ curve = EllipticCurve(p, a, b)
 G = (Gx, Gy)
 
 # Static private keys
-private_keys = [
-    1357924680,
-    2468135790,
-    1122334455,
-    9988776655,
-    1231231231,
-    9879879879,
-    1111222233,
-    4444555566,
-    7777888899,
-    5555666677
-]
+Ka = 1234567890
+Kb = 9876543210
 
-public_keys = [curve.scalar_mult(k, G) for k in private_keys]
+def generate_public_key(private_key, G, curve):
+    return curve.scalar_mult(private_key, G)
 
+def compute_shared_secret(private_key, peer_public_key, curve):
+    return curve.scalar_mult(private_key, peer_public_key)
+
+def main():
+    # Generate public keys
+    alice_public_key = generate_public_key(Ka, G, curve)
+    bob_public_key = generate_public_key(Kb, G, curve)
+    print(f"Alice's Public Key: {alice_public_key}")
+    print(f"Bob's Public Key: {bob_public_key}")
+
+    # Compute shared secrets
+    shared_secret_key_bob_side = curve.scalar_mult(Kb, alice_public_key)
+    print(f"Shared Secret Key (Bob's side): {shared_secret_key_bob_side}")
+
+    shared_secret_key_alice_side = curve.scalar_mult(Ka, bob_public_key)
+    print(f"Shared Secret Key (Alice's side): {shared_secret_key_alice_side}")
+
+    # Verify that both shared secrets are equal
+    assert shared_secret_key_bob_side == shared_secret_key_alice_side, "Shared secrets do not match!"
+    print("Shared secrets match.")
+
+if __name__ == "__main__":
+    main()

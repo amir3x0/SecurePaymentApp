@@ -3,7 +3,16 @@ class IDEA:
         self.key = self.expand_key(key)
 
     def expand_key(self, key):
-        # Key schedule to generate subkeys for each round
+        """
+        Expands the given key to generate subkeys for each round.
+
+        Args:
+            key (int): The original key.
+
+        Returns:
+            list: A list of subkeys generated from the original key.
+
+        """
         key_schedule = []
         for i in range(0, 8):
             subkey = (key >> (112 - i * 16)) & 0xFFFF
@@ -19,7 +28,16 @@ class IDEA:
         return key_schedule
 
     def encrypt_block(self, block):
-        # IDEA encryption of a single block
+        """
+        Encrypts a single block using the IDEA encryption algorithm.
+
+        Args:
+            block (int): The block to be encrypted.
+
+        Returns:
+            int: The encrypted block.
+
+        """
         x1, x2, x3, x4 = (block >> 48) & 0xFFFF, (block >> 32) & 0xFFFF, (block >> 16) & 0xFFFF, block & 0xFFFF
         for round in range(8):
             k = self.key[round * 6:(round + 1) * 6]
@@ -58,7 +76,19 @@ class IDEA:
 
 # OFB mode implementation
 def idea_ofb_mode(idea, iv, data, mode='encrypt'):
-    # Process data using IDEA in OFB mode
+    """
+    Process data using IDEA in Output Feedback (OFB) mode.
+
+    Args:
+        idea (IDEA): An instance of the IDEA class used for encryption/decryption.
+        iv (bytes): The initialization vector (IV) used for the OFB mode.
+        data (bytes): The data to be processed.
+        mode (str, optional): The mode of operation ('encrypt' or 'decrypt'). Defaults to 'encrypt'.
+
+    Returns:
+        bytes: The processed data.
+
+    """
     block_size = 64  # IDEA block size is 64 bits
     iv = int.from_bytes(iv, byteorder='big')
     result = bytearray()

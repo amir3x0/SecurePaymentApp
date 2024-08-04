@@ -2,7 +2,7 @@
 
 This project implements a secure payment application using the following cryptographic mechanisms:
 - IDEA algorithm in OFB mode for encryption and decryption.
-- Elliptic Curve Diffie-Hellman (EC DH) for secure key exchange.
+- Elliptic Curve Diffie-Hellman (EC DH) for secure key generation.
 - Schnorr signature scheme for digital signatures.
 
 ## Project Structure
